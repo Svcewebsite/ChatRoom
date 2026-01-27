@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WWChat | College Code Lab</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Fira+Code:wght@400;500&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+        .chat-container { height: calc(100vh - 140px); }
+        .code-font { font-family: 'Fira Code', monospace; }
+        .ww-purple { background-color: #6366f1; } 
+        
+        .msg-bubble {
+            max-width: 85%;
+            position: relative;
+            padding: 8px 12px;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .msg-sent { background-color: #6366f1; color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
+        .msg-received { background-color: #ffffff; color: #1f2937; align-self: flex-start; border-bottom-left-radius: 2px; }
+
+        .hidden { display: none !important; }
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+
+        .room-card {
+            transition: all 0.2s;
+            border: 1px solid #e2e8f0;
+        }
+        .room-card:hover { border-color: #6366f1; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+    </style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden">
+
+    <!-- Screen 1: Name Setup -->
+    <div id="nameSetupScreen" class="fixed inset-0 z-[100] bg-indigo-600 flex items-center justify-center p-4">
+        <div class="bg-white p-8 rounded-3xl shadow-2xl max-w-sm w-full text-center space-y-6">
+            <div class="bg-indigo-100 w-20 h-20 rounded-2xl flex items-center justify-center text-indigo-600 mx-auto">
+                <i class="fas fa-user-astronaut text-3xl"></i>
+            </div>
+            <div>
+                <h1 class="text-2xl font-black text-gray-900">Welcome to WWChat</h1>
+                <p class="text-gray-500 text-sm mt-1">Identify yourself to enter the lab</p>
+            </div>
+            <input id="initialNameInput" type="text" placeholder="Your Name" class="w-full p-4 bg-gray-50 border-2 border-gray-100 rounded-xl focus:border-indigo-500 outline-none text-center font-bold text-lg">
+            <button id="startBtn" class="w-full ww-purple text-white py-4 rounded-xl font-bold hover:opacity-90 transition-all">Continue to Dashboard</button>
+        </div>
+    </div>
+
+    <!-- Screen 2: Dashboard -->
+    <div id="homeScreen" class="fixed inset-0 z-50 bg-white flex flex-col hidden">
+        <header class="p-4 border-b border-gray-100 flex justify-between items-center bg-white shrink-0">
+            <div class="flex items-center space-x-2">
+                <div class="bg-indigo-600 text-white p-2 rounded-lg"><i class="fas fa-terminal"></i></div>
+                <h1 class="text-xl font-black tracking-tighter text-gray-900">WWChat</h1>
+            </div>
+            <div class="flex items-center space-x-4">
+                <span id="userGreeting" class="text-sm font-semibold text-gray-600"></span>
+                <button onclick="localStorage.removeItem('wwchat_name'); location.reload();" class="text-[10px] text-red-500 font-bold uppercase tracking-widest border border-red-100 px-2 py-1 rounded">Logout</button>
+            </div>
+        </header>
+
+        <main class="flex-grow flex flex-col lg:flex-row overflow-hidden">
+            <div class="flex-grow p-6 overflow-y-auto bg-gray-50">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-xs font-black text-gray-400 uppercase tracking-widest">Available Lab Rooms</h2>
+                    <span id="roomCount" class="text-[10px] bg-gray-200 px-2 py-0.5 rounded-full font-bold">0 Active</span>
+                </div>
+                <div id="roomsGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
+            </div>
+
+            <div class="w-full lg:w-80 p-6 border-l border-gray-100 bg-white shrink-0">
+                <h2 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-4">Create New Room</h2>
+                <div class="space-y-4">
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-bold text-gray-500 ml-1">ROOM NAME</label>
+                        <input id="newRoomName" type="text" placeholder="e.g. Python Lab 01" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-indigo-500 outline-none text-sm font-medium">
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-bold text-gray-500 ml-1">ACCESS CODE (Unique)</label>
+                        <input id="newRoomCode" type="text" placeholder="Unique password..." class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-indigo-500 outline-none text-sm font-medium">
+                    </div>
+                    <button id="finalizeCreateBtn" class="w-full ww-purple text-white py-3 rounded-xl font-bold shadow-lg shadow-indigo-100 hover:scale-[1.02] transition-all">
+                        <i class="fas fa-plus mr-2"></i> Create Room
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Screen 3: Chat Interface -->
+    <div id="chatApp" class="fixed inset-0 z-[70] bg-white flex flex-col hidden">
+        <header class="ww-purple text-white p-3 flex justify-between items-center shadow-lg">
+            <div class="flex items-center space-x-3">
+                <button id="backToHome" class="w-10 h-10 rounded-xl hover:bg-white/20 transition-colors flex items-center justify-center">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                <div>
+                    <h2 id="activeRoomNameDisplay" class="text-sm font-black uppercase tracking-tight">ROOM NAME</h2>
+                    <p id="activeRoomCodeDisplay" class="text-[10px] opacity-70 font-mono"></p>
+                </div>
+            </div>
+            <button id="copyInvite" class="bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all">
+                <i class="fas fa-share-alt mr-1"></i> Copy Code
+            </button>
+        </header>
+
+        <main id="chatWindow" class="flex-grow overflow-y-auto p-4 bg-slate-50 flex flex-col">
+            <div id="messagesList" class="flex flex-col"></div>
+        </main>
+
+        <footer class="p-4 bg-white border-t border-gray-100">
+            <div class="max-w-4xl mx-auto flex items-end space-x-3">
+                <div class="flex-grow bg-gray-50 rounded-2xl border border-gray-200 focus-within:bg-white focus-within:border-indigo-400 transition-all px-4 py-2">
+                    <textarea id="messageInput" rows="1" class="w-full bg-transparent outline-none py-2 text-sm resize-none code-font" placeholder="Write code or message..."></textarea>
+                </div>
+                <button id="sendBtn" class="w-12 h-12 ww-purple text-white rounded-2xl flex items-center justify-center shadow-xl hover:scale-105 active:scale-95 transition-all">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Modal: Enter Code -->
+    <div id="authModal" class="fixed inset-0 z-[110] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+        <div class="bg-white p-6 rounded-3xl w-full max-w-xs space-y-4 shadow-2xl">
+            <div class="text-center">
+                <h3 id="modalRoomName" class="font-black text-gray-900">Room Name</h3>
+                <p class="text-xs text-gray-500">Enter code to enter this chat</p>
+            </div>
+            <input id="modalCodeInput" type="password" placeholder="Unique Code" class="w-full p-4 bg-gray-50 border-2 border-gray-100 rounded-xl focus:border-indigo-500 outline-none text-center font-bold tracking-widest">
+            <div class="flex space-x-2">
+                <button id="cancelAuth" class="flex-1 py-3 text-gray-400 font-bold text-sm hover:text-gray-600">Cancel</button>
+                <button id="confirmAuth" class="flex-1 ww-purple text-white py-3 rounded-xl font-bold text-sm">Join Room</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, where, deleteDoc, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+        
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'wwchat-pro-v1';
+
+        let currentUser = null;
+        let activeRoom = null;
+        let unsubscribeMessages = null;
+        let pendingRoom = null;
+
+        const screens = {
+            name: document.getElementById('nameSetupScreen'),
+            home: document.getElementById('homeScreen'),
+            chat: document.getElementById('chatApp')
+        };
+        const modal = document.getElementById('authModal');
+
+        // Rule 3: Auth Before Queries
+        const initAuth = async () => {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    try {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } catch (tokenError) {
+                        console.error("Custom token mismatch, falling back to anonymous:", tokenError);
+                        await signInAnonymously(auth);
+                    }
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (error) {
+                console.error("Final Auth error:", error);
+            }
+        };
+
+        onAuthStateChanged(auth, (user) => {
+            currentUser = user;
+            if (user) {
+                checkName();
+            }
+        });
+
+        initAuth();
+
+        function checkName() {
+            const savedName = localStorage.getItem('wwchat_name');
+            if (savedName) {
+                screens.name.classList.add('hidden');
+                screens.home.classList.remove('hidden');
+                document.getElementById('userGreeting').innerText = `Hello, ${savedName}`;
+                initDashboard();
+            } else {
+                screens.name.classList.remove('hidden');
+            }
+        }
+
+        function initDashboard() {
+            if (!currentUser) return;
+            const roomsRef = collection(db, 'artifacts', appId, 'public', 'data', 'rooms');
+            onSnapshot(roomsRef, (snapshot) => {
+                const grid = document.getElementById('roomsGrid');
+                document.getElementById('roomCount').innerText = `${snapshot.size} Active`;
+                grid.innerHTML = '';
+                
+                snapshot.forEach(d => {
+                    const data = d.data();
+                    const card = document.createElement('div');
+                    card.className = "room-card bg-white p-5 rounded-2xl flex flex-col justify-between";
+                    const isCreator = data.createdBy === currentUser.uid;
+                    
+                    card.innerHTML = `
+                        <div class="mb-4">
+                            <h3 class="font-black text-gray-900 truncate">${data.name}</h3>
+                            <p class="text-[11px] text-gray-400 font-bold uppercase tracking-tighter mt-1">Creator: ${data.creatorName || 'Anonymous'}</p>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <button class="join-btn flex-grow ww-purple text-white py-2 rounded-lg text-xs font-bold hover:opacity-90 transition-all">
+                                <i class="fas fa-lock mr-1"></i> Enter Code
+                            </button>
+                            ${isCreator ? `<button class="delete-btn w-10 h-8 border border-red-100 text-red-500 rounded-lg flex items-center justify-center hover:bg-red-50"><i class="fas fa-trash-alt text-xs"></i></button>` : ''}
+                        </div>
+                    `;
+                    card.querySelector('.join-btn').onclick = () => showAuthModal(d.id, data);
+                    if (isCreator) card.querySelector('.delete-btn').onclick = () => deleteRoom(d.id);
+                    grid.appendChild(card);
+                });
+            }, (err) => console.error("Room sync error:", err));
+        }
+
+        function showAuthModal(id, data) {
+            pendingRoom = { id, ...data };
+            document.getElementById('modalRoomName').innerText = data.name;
+            document.getElementById('modalCodeInput').value = '';
+            modal.classList.remove('hidden');
+            document.getElementById('modalCodeInput').focus();
+        }
+
+        document.getElementById('confirmAuth').onclick = () => {
+            const codeInput = document.getElementById('modalCodeInput').value.trim();
+            if (codeInput === pendingRoom.code) {
+                modal.classList.add('hidden');
+                enterChat(pendingRoom);
+            } else { alert("Incorrect code."); }
+        };
+
+        document.getElementById('cancelAuth').onclick = () => modal.classList.add('hidden');
+
+        document.getElementById('startBtn').onclick = () => {
+            const name = document.getElementById('initialNameInput').value.trim();
+            if (name) { localStorage.setItem('wwchat_name', name); checkName(); }
+        };
+
+        document.getElementById('finalizeCreateBtn').onclick = async () => {
+            if (!currentUser) return;
+            const name = document.getElementById('newRoomName').value.trim();
+            const code = document.getElementById('newRoomCode').value.trim();
+            if (!name || !code) return alert("Required fields missing");
+
+            try {
+                const roomsRef = collection(db, 'artifacts', appId, 'public', 'data', 'rooms');
+                await addDoc(roomsRef, {
+                    name, code, createdBy: currentUser.uid, 
+                    creatorName: localStorage.getItem('wwchat_name'), 
+                    createdAt: serverTimestamp()
+                });
+                document.getElementById('newRoomName').value = '';
+                document.getElementById('newRoomCode').value = '';
+            } catch (err) { console.error(err); }
+        };
+
+        async function deleteRoom(id) {
+            if (!confirm("Delete room?")) return;
+            try { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'rooms', id)); } 
+            catch (err) { console.error(err); }
+        }
+
+        function enterChat(room) {
+            activeRoom = room;
+            screens.home.classList.add('hidden');
+            screens.chat.classList.remove('hidden');
+            document.getElementById('activeRoomNameDisplay').innerText = room.name;
+            listenToMessages(room.id);
+        }
+
+        document.getElementById('backToHome').onclick = () => {
+            if (unsubscribeMessages) unsubscribeMessages();
+            screens.chat.classList.add('hidden');
+            screens.home.classList.remove('hidden');
+        };
+
+        function listenToMessages(roomId) {
+            if (!currentUser) return;
+            const msgRef = collection(db, 'artifacts', appId, 'public', 'data', 'messages');
+            unsubscribeMessages = onSnapshot(msgRef, (snapshot) => {
+                const list = document.getElementById('messagesList');
+                const sorted = snapshot.docs
+                    .map(d => d.data())
+                    .filter(m => m.roomId === roomId)
+                    .sort((a,b) => (a.at?.toMillis() || 0) - (b.at?.toMillis() || 0));
+                
+                list.innerHTML = '';
+                sorted.forEach(msg => {
+                    const isMe = msg.uid === currentUser.uid;
+                    const el = document.createElement('div');
+                    el.className = `msg-bubble ${isMe ? 'msg-sent' : 'msg-received'}`;
+                    const isCode = msg.text.includes('{') || msg.text.includes(';') || msg.text.includes('def ');
+                    el.innerHTML = `<div class="text-[9px] font-bold uppercase mb-1 opacity-60">${isMe ? 'YOU' : msg.user}</div>
+                        ${isCode ? `<pre class="text-[11px] code-font mt-1 p-2 bg-black/5 rounded">${escapeHTML(msg.text)}</pre>` : `<p class="text-sm font-medium">${escapeHTML(msg.text)}</p>`}`;
+                    list.appendChild(el);
+                });
+                document.getElementById('chatWindow').scrollTop = document.getElementById('chatWindow').scrollHeight;
+            }, (err) => console.error("Msg sync error:", err));
+        }
+
+        async function sendMsg() {
+            if (!currentUser || !activeRoom) return;
+            const input = document.getElementById('messageInput');
+            const text = input.value.trim();
+            if (!text) return;
+            input.value = '';
+            try {
+                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'messages'), {
+                    text, roomId: activeRoom.id, uid: currentUser.uid,
+                    user: localStorage.getItem('wwchat_name'), at: serverTimestamp()
+                });
+            } catch (err) { console.error(err); }
+        }
+
+        document.getElementById('sendBtn').onclick = sendMsg;
+        document.getElementById('messageInput').onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); } };
+        document.getElementById('copyInvite').onclick = () => { navigator.clipboard.writeText(activeRoom.code); alert("Code copied!"); };
+        function escapeHTML(s) { return s.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+    </script>
+</body>
+</html>
