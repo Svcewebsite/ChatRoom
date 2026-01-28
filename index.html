@@ -297,7 +297,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, serverTimestamp, doc, setDoc, deleteDoc, query, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, serverTimestamp, doc, setDoc, deleteDoc, query, where, orderBy, limit } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-analytics.js";
 
@@ -384,9 +384,13 @@
         }
 
         function listenToRooms() {
-            onSnapshot(baseCollection, (snap) => {
+            if (unsubRooms) unsubRooms();
+            unsubRooms = onSnapshot(baseCollection, (snap) => {
                 cachedRooms = [];
-                snap.forEach(d => { if (d.data().docType === 'room') cachedRooms.push({ ...d.data(), docId: d.id }); });
+                snap.forEach(d => { 
+                    const data = d.data();
+                    if (data.docType === 'room') cachedRooms.push({ ...data, docId: d.id }); 
+                });
                 const badge = document.getElementById('room-count-badge');
                 if (badge) badge.innerText = cachedRooms.length;
                 renderRooms();
@@ -477,12 +481,14 @@
                 });
                 const countEl = document.getElementById('active-user-count');
                 if (countEl) countEl.innerText = `${count} online`;
-            });
+            }, (err) => console.error(err));
         }
 
         function listenToMessages(roomId) {
             if (unsubMsgs) unsubMsgs();
-            unsubMsgs = onSnapshot(baseCollection, (snap) => {
+            
+            // Re-render and scroll helper
+            const render = (snap) => {
                 const container = document.getElementById('container-messages');
                 if (!container) return;
                 const msgs = [];
@@ -490,7 +496,9 @@
                     const data = d.data();
                     if (data.docType === 'message' && data.roomId === roomId) msgs.push(data);
                 });
+                
                 msgs.sort((a,b) => (a.createdAt?.toMillis() || 0) - (b.createdAt?.toMillis() || 0));
+                
                 container.innerHTML = '';
                 msgs.forEach((m, idx) => {
                     const isMe = m.senderUid === userState.uid;
@@ -505,9 +513,13 @@
                     div.innerHTML = content;
                     container.appendChild(div);
                 });
+                
+                // Immediate scroll for better feel
                 const scrollArea = document.getElementById('scroll-area');
                 if (scrollArea) scrollArea.scrollTop = scrollArea.scrollHeight;
-            });
+            };
+
+            unsubMsgs = onSnapshot(baseCollection, render, (err) => console.error(err));
         }
 
         async function sendMessage() {
@@ -515,14 +527,26 @@
             if (!msgArea) return;
             const text = msgArea.value.trim();
             if (!text || !activeRoom) return;
+            
+            const currentRoomId = activeRoom.roomId;
             msgArea.value = '';
             msgArea.style.height = 'auto';
-            await addDoc(baseCollection, {
-                text, roomId: activeRoom.roomId, senderUid: userState.uid,
-                senderName: userState.name, docType: 'message',
-                isCode: isCodeMode, createdAt: serverTimestamp()
-            });
-            setChatMode(false);
+            
+            try {
+                await addDoc(baseCollection, {
+                    text, 
+                    roomId: currentRoomId, 
+                    senderUid: userState.uid,
+                    senderName: userState.name, 
+                    docType: 'message',
+                    isCode: isCodeMode, 
+                    createdAt: serverTimestamp()
+                });
+            } catch (e) {
+                console.error("Error sending message: ", e);
+            }
+            
+            if (isCodeMode) setChatMode(false);
         }
 
         const setChatMode = (isCode) => {
@@ -572,7 +596,7 @@
             if (get('btn-send')) get('btn-send').onclick = sendMessage;
             if (get('input-message')) {
                 get('input-message').onkeydown = (e) => {
-                    if (e.key === 'Enter' && !e.shiftKey && !isCodeMode && window.innerWidth > 768) {
+                    if (e.key === 'Enter' && !e.shiftKey && !isCodeMode) {
                         e.preventDefault();
                         sendMessage();
                     }
