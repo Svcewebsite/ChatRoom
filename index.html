@@ -3,347 +3,660 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WWChat | College Code Lab</title>
+    <title>WWChat | Production Build</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script>
+        if (localStorage.getItem('ww_theme') === 'dark' || (!('ww_theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    </script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Fira+Code:wght@400;500&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&family=Ubuntu+Mono&family=Fira+Code:wght@400;500&display=swap');
         
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f8fafc;
+        :root {
+            --bg-main: #f8fafc;
+            --bg-card: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+            --input-bg: #ffffff;
+            --sidebar-box: #f1f5f9;
+            --new-card-bg: #f0f4ff;
+            --new-card-border: #e0e7ff;
         }
-        .chat-container { height: calc(100vh - 140px); }
-        .code-font { font-family: 'Fira Code', monospace; }
-        .ww-purple { background-color: #6366f1; } 
+
+        .dark {
+            --bg-main: #0f172a;
+            --bg-card: #1e293b;
+            --text-main: #f1f5f9;
+            --text-muted: #94a3b8;
+            --border-color: #334155;
+            --input-bg: #0f172a;
+            --sidebar-box: #1e293b;
+            --new-card-bg: rgba(30, 41, 59, 0.5);
+            --new-card-border: rgba(99, 102, 241, 0.2);
+        }
+
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background-color: var(--bg-main) !important; 
+            color: var(--text-main);
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
         
-        .msg-bubble {
-            max-width: 85%;
+        .bg-custom-main { background-color: var(--bg-main); }
+        .bg-custom-card { background-color: var(--bg-card); }
+        .border-custom { border-color: var(--border-color); }
+        .text-custom-main { color: var(--text-main); }
+        .text-custom-muted { color: var(--text-muted); }
+
+        /* Fixed New Channel Card Colors */
+        .new-channel-card {
+            background-color: var(--new-card-bg);
+            border: 1px solid var(--new-card-border);
+        }
+
+        .ww-gradient { background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); }
+        
+        .glass-sidebar { 
+            background: rgba(255, 255, 255, 0.5); 
+            backdrop-filter: blur(12px); 
+        }
+        .dark .glass-sidebar { 
+            background: rgba(15, 23, 42, 0.7); 
+            backdrop-filter: blur(12px); 
+        }
+
+        .msg-bubble { max-width: 85%; padding: 10px 14px; border-radius: 18px; margin-bottom: 8px; position: relative; }
+        .msg-sent { background: #6366f1; color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
+        .msg-received { background: var(--bg-card); color: var(--text-main); align-self: flex-start; border-bottom-left-radius: 4px; border: 1px solid var(--border-color); }
+        
+        .code-container {
+            font-family: 'Fira Code', 'Ubuntu Mono', monospace;
+            background: #1e1e2e;
+            color: #cdd6f4;
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 6px;
+            font-size: 0.85rem;
             position: relative;
-            padding: 8px 12px;
-            border-radius: 12px;
-            margin-bottom: 12px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            overflow-x: auto;
+            white-space: pre;
+            border: 1px solid rgba(255,255,255,0.1);
         }
-        .msg-sent { background-color: #6366f1; color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
-        .msg-received { background-color: #ffffff; color: #1f2937; align-self: flex-start; border-bottom-left-radius: 2px; }
-
-        .hidden { display: none !important; }
-        ::-webkit-scrollbar { width: 5px; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-
-        .room-card {
+        .copy-btn {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            background: rgba(255,255,255,0.15);
+            color: white;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            cursor: pointer;
+            border: 1px solid rgba(255,255,255,0.2);
+            font-family: 'Plus Jakarta Sans', sans-serif;
             transition: all 0.2s;
-            border: 1px solid #e2e8f0;
+            z-index: 10;
         }
-        .room-card:hover { border-color: #6366f1; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+
+        .switch { position: relative; display: inline-block; width: 40px; height: 20px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cbd5e1; transition: .4s; border-radius: 20px; }
+        .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: #6366f1; }
+        input:checked + .slider:before { transform: translateX(20px); }
+
+        #screen-terminal { background-color: #300a24; color: #ffffff; font-family: 'Ubuntu Mono', monospace; cursor: text; }
+        .term-prompt { color: #8ae234; font-weight: bold; }
+        .term-dir { color: #729fcf; font-weight: bold; }
+        .term-cursor { border-right: 8px solid white; animation: blink 1s step-end infinite; }
+        @keyframes blink { 50% { border-color: transparent; } }
+
+        #notification-toast {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 9999;
+        }
+        #notification-toast.show { transform: translateX(-50%) translateY(0); }
     </style>
 </head>
-<body class="h-screen flex flex-col overflow-hidden">
+<body class="h-screen flex flex-col overflow-hidden bg-custom-main">
 
-    <!-- Screen 1: Name Setup -->
-    <div id="nameSetupScreen" class="fixed inset-0 z-[100] bg-indigo-600 flex items-center justify-center p-4">
-        <div class="bg-white p-8 rounded-3xl shadow-2xl max-w-sm w-full text-center space-y-6">
-            <div class="bg-indigo-100 w-20 h-20 rounded-2xl flex items-center justify-center text-indigo-600 mx-auto">
-                <i class="fas fa-user-astronaut text-3xl"></i>
+    <div id="connectionBar" class="bg-amber-500 text-white text-[10px] py-1 px-4 text-center font-bold transition-all">
+        <i class="fas fa-circle-notch fa-spin mr-2"></i> CONNECTING...
+    </div>
+
+    <div id="notification-toast" class="bg-slate-900 text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center space-x-3 pointer-events-none">
+        <div id="toast-icon-pulse" class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
+        <span id="notification-text" class="text-sm font-bold tracking-tight text-white">Notification Message</span>
+    </div>
+
+    <!-- TERMINAL PANIC SCREEN -->
+    <div id="screen-terminal" class="fixed inset-0 z-[200] hidden flex flex-col p-4 overflow-hidden select-none">
+        <div class="flex items-center space-x-2 text-xs opacity-60 mb-2 border-b border-white/10 pb-2">
+            <span class="text-red-400">●</span> <span class="text-yellow-400">●</span> <span class="text-green-400">●</span>
+            <span class="ml-4 tracking-tight">mark@linux-desktop: /tmp/tutorial</span>
+        </div>
+        <div id="terminal-content" class="text-sm leading-relaxed space-y-1">
+            <p><span class="term-prompt">mark@linux-desktop</span>:<span class="term-dir">/tmp/tutorial</span>$ ls -la</p>
+            <p><span class="term-prompt">mark@linux-desktop</span>:<span class="term-dir">/tmp/tutorial</span>$ mv "folder 1" folder_1</p>
+            <p><span class="term-prompt">mark@linux-desktop</span>:<span class="term-dir">/tmp/tutorial</span>$ ls</p>
+            <p><span class="term-prompt">mark@linux-desktop</span>:<span class="term-dir">/tmp/tutorial</span>$ <span class="term-cursor">&nbsp;</span></p>
+        </div>
+        <div class="mt-auto text-[10px] opacity-20 text-center uppercase tracking-[0.3em]">System Monitor Active - Click to Resume</div>
+    </div>
+
+    <!-- 1. AUTH SCREEN -->
+    <div id="screen-auth" class="fixed inset-0 z-[100] ww-gradient flex items-center justify-center p-6">
+        <div class="bg-custom-card p-8 rounded-[32px] shadow-2xl max-w-sm w-full text-center space-y-6">
+            <div class="w-20 h-20 ww-gradient rounded-3xl mx-auto flex items-center justify-center shadow-xl mb-2">
+                <i class="fas fa-comment-dots text-white text-3xl"></i>
             </div>
-            <div>
-                <h1 class="text-2xl font-black text-gray-900">Welcome to WWChat</h1>
-                <p class="text-gray-500 text-sm mt-1">Identify yourself to enter the lab</p>
-            </div>
-            <input id="initialNameInput" type="text" placeholder="Your Name" class="w-full p-4 bg-gray-50 border-2 border-gray-100 rounded-xl focus:border-indigo-500 outline-none text-center font-bold text-lg">
-            <button id="startBtn" class="w-full ww-purple text-white py-4 rounded-xl font-bold hover:opacity-90 transition-all">Continue to Dashboard</button>
+            <h1 class="text-3xl font-extrabold tracking-tight text-custom-main">WWChat</h1>
+            <input id="input-username" type="text" placeholder="Enter display name" class="w-full p-4 border border-custom rounded-2xl focus:border-indigo-500 outline-none text-center font-bold text-custom-main" style="background-color: var(--bg-main)">
+            <button id="btn-login" class="w-full ww-gradient text-white py-4 rounded-2xl font-bold hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg">Get Started</button>
         </div>
     </div>
 
-    <!-- Screen 2: Dashboard -->
-    <div id="homeScreen" class="fixed inset-0 z-50 bg-white flex flex-col hidden">
-        <header class="p-4 border-b border-gray-100 flex justify-between items-center bg-white shrink-0">
-            <div class="flex items-center space-x-2">
-                <div class="bg-indigo-600 text-white p-2 rounded-lg"><i class="fas fa-terminal"></i></div>
-                <h1 class="text-xl font-black tracking-tighter text-gray-900">WWChat</h1>
-            </div>
+    <!-- 2. DASHBOARD SCREEN -->
+    <div id="screen-dashboard" class="fixed inset-0 z-50 bg-custom-main flex flex-col hidden">
+        <header class="p-6 bg-custom-card border-b border-custom flex justify-between items-center transition-colors">
             <div class="flex items-center space-x-4">
-                <span id="userGreeting" class="text-sm font-semibold text-gray-600"></span>
-                <button onclick="localStorage.removeItem('wwchat_name'); location.reload();" class="text-[10px] text-red-500 font-bold uppercase tracking-widest border border-red-100 px-2 py-1 rounded">Logout</button>
+                <div>
+                    <h1 class="text-2xl font-extrabold tracking-tight text-indigo-600 leading-none">Dashboard</h1>
+                    <p id="display-user" class="text-[10px] text-custom-muted font-bold uppercase mt-1 tracking-wider"></p>
+                </div>
+                <div class="h-8 w-[1px] border-r border-custom"></div>
+                <div class="flex items-center space-x-2 bg-green-500/10 px-3 py-1.5 rounded-full border border-green-500/20">
+                    <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                    <span id="global-presence-count" class="text-xs font-bold text-green-600 dark:text-green-400">0 Active Members</span>
+                </div>
+            </div>
+            <div class="flex items-center space-x-2">
+                <button id="btn-panic" class="p-3 rounded-xl bg-custom-main text-custom-muted border border-custom transition-colors"><i class="fas fa-terminal"></i></button>
+                <button id="btn-theme-toggle" class="p-3 rounded-xl bg-custom-main text-custom-muted border border-custom transition-colors">
+                    <i class="fas fa-moon dark:hidden"></i><i class="fas fa-sun hidden dark:block"></i>
+                </button>
+                <button id="btn-logout" class="p-3 rounded-xl bg-custom-main text-custom-muted border border-custom hover:text-red-500 transition-colors"><i class="fas fa-sign-out-alt"></i></button>
             </div>
         </header>
 
-        <main class="flex-grow flex flex-col lg:flex-row overflow-hidden">
-            <div class="flex-grow p-6 overflow-y-auto bg-gray-50">
-                <div class="flex items-center justify-between mb-6">
-                    <h2 class="text-xs font-black text-gray-400 uppercase tracking-widest">Available Lab Rooms</h2>
-                    <span id="roomCount" class="text-[10px] bg-gray-200 px-2 py-0.5 rounded-full font-bold">0 Active</span>
+        <div class="flex-grow flex flex-col md:flex-row overflow-hidden bg-custom-main">
+            <div class="flex-grow p-6 overflow-y-auto flex flex-col">
+                <div class="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
+                    <div class="flex items-center space-x-2">
+                        <h2 class="font-extrabold text-custom-muted text-xs uppercase tracking-widest">Active Channels</h2>
+                        <span id="room-count-badge" class="bg-indigo-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">0</span>
+                    </div>
+                    <div class="relative max-w-md w-full">
+                        <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-custom-muted opacity-50 text-sm"></i>
+                        <input id="room-search" type="text" placeholder="Search by channel name..." class="w-full pl-10 pr-4 py-2.5 bg-custom-card border border-custom rounded-2xl text-sm outline-none focus:border-indigo-500 transition-all text-custom-main">
+                    </div>
                 </div>
-                <div id="roomsGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
+                
+                <div id="list-rooms" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+                
+                <div id="empty-state" class="hidden flex-grow flex flex-col items-center justify-center text-custom-muted py-12">
+                    <i class="fas fa-search text-4xl mb-3 opacity-20"></i>
+                    <p class="text-sm">No channels found matching your search.</p>
+                </div>
             </div>
 
-            <div class="w-full lg:w-80 p-6 border-l border-gray-100 bg-white shrink-0">
-                <h2 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-4">Create New Room</h2>
-                <div class="space-y-4">
-                    <div class="space-y-1">
-                        <label class="text-[10px] font-bold text-gray-500 ml-1">ROOM NAME</label>
-                        <input id="newRoomName" type="text" placeholder="e.g. Python Lab 01" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-indigo-500 outline-none text-sm font-medium">
+            <!-- New Channel Panel (FIXED STYLING) -->
+            <div class="w-full md:w-80 p-6 glass-sidebar border-l border-custom space-y-6">
+                <div class="new-channel-card p-6 rounded-[32px] shadow-sm">
+                    <h3 class="font-bold text-indigo-600 dark:text-indigo-400 mb-4 flex items-center">
+                        <i class="fas fa-plus-circle mr-2 opacity-50"></i> New Channel
+                    </h3>
+                    <div class="space-y-4">
+                        <input id="new-room-name" type="text" placeholder="e.g. Project Alpha" class="w-full p-4 rounded-2xl border border-custom bg-white dark:bg-slate-900 text-custom-main text-sm outline-none focus:border-indigo-500 shadow-sm">
+                        
+                        <div class="flex items-center justify-between p-3 rounded-2xl border border-custom px-4 bg-white dark:bg-slate-900 shadow-sm">
+                            <span class="text-xs font-bold text-custom-muted">Private Room?</span>
+                            <label class="switch"><input type="checkbox" id="check-private"><span class="slider"></span></label>
+                        </div>
+                        
+                        <div id="password-wrapper" class="hidden">
+                            <input id="new-room-code" type="text" placeholder="Set Access Code" class="w-full p-4 rounded-2xl border border-custom bg-white dark:bg-slate-900 text-custom-main text-sm outline-none focus:border-indigo-500 shadow-sm">
+                        </div>
+                        
+                        <button id="btn-create-room" class="w-full ww-gradient text-white py-4 rounded-2xl font-bold shadow-lg text-lg tracking-tight hover:brightness-110 active:scale-[0.98] transition-all">Initialize Room</button>
                     </div>
-                    <div class="space-y-1">
-                        <label class="text-[10px] font-bold text-gray-500 ml-1">ACCESS CODE (Unique)</label>
-                        <input id="newRoomCode" type="text" placeholder="Unique password..." class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-indigo-500 outline-none text-sm font-medium">
-                    </div>
-                    <button id="finalizeCreateBtn" class="w-full ww-purple text-white py-3 rounded-xl font-bold shadow-lg shadow-indigo-100 hover:scale-[1.02] transition-all">
-                        <i class="fas fa-plus mr-2"></i> Create Room
-                    </button>
                 </div>
             </div>
-        </main>
+        </div>
     </div>
 
-    <!-- Screen 3: Chat Interface -->
-    <div id="chatApp" class="fixed inset-0 z-[70] bg-white flex flex-col hidden">
-        <header class="ww-purple text-white p-3 flex justify-between items-center shadow-lg">
-            <div class="flex items-center space-x-3">
-                <button id="backToHome" class="w-10 h-10 rounded-xl hover:bg-white/20 transition-colors flex items-center justify-center">
-                    <i class="fas fa-arrow-left"></i>
-                </button>
+    <!-- CHAT INTERFACE -->
+    <div id="screen-chat" class="fixed inset-0 z-[70] bg-custom-main flex flex-col hidden">
+        <header class="ww-gradient text-white p-4 flex items-center justify-between shadow-xl">
+            <div class="flex items-center space-x-4">
+                <button id="btn-chat-back" class="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center"><i class="fas fa-chevron-left"></i></button>
                 <div>
-                    <h2 id="activeRoomNameDisplay" class="text-sm font-black uppercase tracking-tight">ROOM NAME</h2>
-                    <p id="activeRoomCodeDisplay" class="text-[10px] opacity-70 font-mono"></p>
+                    <h2 id="chat-header-name" class="font-extrabold uppercase">ROOM</h2>
+                    <span id="active-user-count" class="text-[10px] opacity-70">0 online</span>
                 </div>
             </div>
-            <button id="copyInvite" class="bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all">
-                <i class="fas fa-share-alt mr-1"></i> Copy Code
-            </button>
+            <div class="flex items-center space-x-2">
+                <button id="btn-panic-chat" class="bg-white/10 px-3 py-1.5 rounded-lg text-xs font-bold"><i class="fas fa-terminal"></i></button>
+                <button id="btn-invite" class="bg-white/10 px-3 py-1.5 rounded-lg text-xs font-bold"><i class="fas fa-user-plus mr-2"></i> Invite</button>
+                <div id="chat-id-badge" class="bg-black/20 px-3 py-1.5 rounded-lg text-[10px] font-mono">CODE</div>
+            </div>
         </header>
 
-        <main id="chatWindow" class="flex-grow overflow-y-auto p-4 bg-slate-50 flex flex-col">
-            <div id="messagesList" class="flex flex-col"></div>
+        <main id="scroll-area" class="flex-grow overflow-y-auto p-6 flex flex-col">
+            <div id="container-messages" class="flex flex-col"></div>
         </main>
 
-        <footer class="p-4 bg-white border-t border-gray-100">
-            <div class="max-w-4xl mx-auto flex items-end space-x-3">
-                <div class="flex-grow bg-gray-50 rounded-2xl border border-gray-200 focus-within:bg-white focus-within:border-indigo-400 transition-all px-4 py-2">
-                    <textarea id="messageInput" rows="1" class="w-full bg-transparent outline-none py-2 text-sm resize-none code-font" placeholder="Write code or message..."></textarea>
+        <footer class="p-4 bg-custom-card border-t border-custom">
+            <div class="max-w-5xl mx-auto space-y-3">
+                <div class="flex space-x-2 px-1">
+                    <button id="mode-text" class="px-3 py-1 rounded-full text-[10px] font-bold border border-indigo-500 bg-indigo-500 text-white transition-all">TEXT MODE</button>
+                    <button id="mode-code" class="px-3 py-1 rounded-full text-[10px] font-bold border border-custom text-custom-muted transition-all">CODE MODE</button>
                 </div>
-                <button id="sendBtn" class="w-12 h-12 ww-purple text-white rounded-2xl flex items-center justify-center shadow-xl hover:scale-105 active:scale-95 transition-all">
-                    <i class="fas fa-paper-plane"></i>
-                </button>
+                <div class="flex items-end space-x-3 bg-custom-main p-2 rounded-2xl border border-custom">
+                    <textarea id="input-message" rows="1" class="flex-grow bg-transparent px-4 py-2 outline-none text-sm text-custom-main resize-none" placeholder="Type message..."></textarea>
+                    <button id="btn-send" class="w-12 h-12 ww-gradient text-white rounded-xl flex items-center justify-center shadow-lg"><i class="fas fa-paper-plane"></i></button>
+                </div>
             </div>
         </footer>
     </div>
 
-    <!-- Modal: Enter Code -->
-    <div id="authModal" class="fixed inset-0 z-[110] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 hidden">
-        <div class="bg-white p-6 rounded-3xl w-full max-w-xs space-y-4 shadow-2xl">
-            <div class="text-center">
-                <h3 id="modalRoomName" class="font-black text-gray-900">Room Name</h3>
-                <p class="text-xs text-gray-500">Enter code to enter this chat</p>
-            </div>
-            <input id="modalCodeInput" type="password" placeholder="Unique Code" class="w-full p-4 bg-gray-50 border-2 border-gray-100 rounded-xl focus:border-indigo-500 outline-none text-center font-bold tracking-widest">
-            <div class="flex space-x-2">
-                <button id="cancelAuth" class="flex-1 py-3 text-gray-400 font-bold text-sm hover:text-gray-600">Cancel</button>
-                <button id="confirmAuth" class="flex-1 ww-purple text-white py-3 rounded-xl font-bold text-sm">Join Room</button>
+    <!-- JOIN MODAL -->
+    <div id="modal-join" class="fixed inset-0 z-[110] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-6 hidden">
+        <div class="bg-custom-card p-8 rounded-[32px] w-full max-w-xs space-y-4 shadow-2xl text-center border border-custom">
+            <i class="fas fa-lock text-3xl text-indigo-600"></i>
+            <h3 class="font-extrabold text-xl text-custom-main">Protected Channel</h3>
+            <p class="text-xs text-custom-muted">Please enter the access code to join this room.</p>
+            <input id="input-join-code" type="text" placeholder="••••" class="w-full p-4 border border-custom rounded-2xl text-center font-mono text-xl tracking-widest outline-none bg-custom-main text-custom-main">
+            <div class="flex space-x-3 pt-2">
+                <button id="btn-join-cancel" class="flex-1 py-3 text-custom-muted font-bold">Cancel</button>
+                <button id="btn-join-confirm" class="flex-1 ww-gradient text-white py-3 rounded-xl font-bold shadow-md">Join</button>
             </div>
         </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, query, where, deleteDoc, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot, serverTimestamp, doc, setDoc, deleteDoc, query, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
-        const firebaseConfig = JSON.parse(__firebase_config);
+        const firebaseConfig = {
+            apiKey: "AIzaSyALHrv3HGnghvdiKIyzqjdoX3tUAI1v4mo",
+            authDomain: "bidea-5e029.firebaseapp.com",
+            projectId: "bidea-5e029",
+            storageBucket: "bidea-5e029.firebasestorage.app",
+            messagingSenderId: "368927694957",
+            appId: "1:368927694957:web:9ad972f4026c9ece6d1f64"
+        };
+
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
-        
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'wwchat-pro-v1';
 
-        let currentUser = null;
+        const APP_ID = 'wwchat_v1';
+        const DATA_PATH = ['artifacts', APP_ID, 'public', 'data', 'subjects'];
+        const baseCollection = collection(db, ...DATA_PATH);
+
+        let userState = { uid: null, name: "" };
         let activeRoom = null;
-        let unsubscribeMessages = null;
-        let pendingRoom = null;
+        let unsubRooms, unsubMsgs, unsubPresence;
+        let pendingJoin = null;
+        let cachedRooms = [];
+        let roomPresenceCounts = {};
+        let isCodeMode = false;
 
-        const screens = {
-            name: document.getElementById('nameSetupScreen'),
-            home: document.getElementById('homeScreen'),
-            chat: document.getElementById('chatApp')
+        const showNotification = (msg, isSuccess = true) => {
+            const toast = document.getElementById('notification-toast');
+            if (!toast) return;
+            const icon = document.getElementById('toast-icon-pulse');
+            document.getElementById('notification-text').innerText = msg;
+            if (icon) icon.className = isSuccess ? 'w-2 h-2 rounded-full bg-green-500 animate-pulse' : 'w-2 h-2 rounded-full bg-red-500 animate-pulse';
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
         };
-        const modal = document.getElementById('authModal');
 
-        // Rule 3: Auth Before Queries
-        const initAuth = async () => {
-            try {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    try {
-                        await signInWithCustomToken(auth, __initial_auth_token);
-                    } catch (tokenError) {
-                        console.error("Custom token mismatch, falling back to anonymous:", tokenError);
-                        await signInAnonymously(auth);
-                    }
-                } else {
-                    await signInAnonymously(auth);
-                }
-            } catch (error) {
-                console.error("Final Auth error:", error);
+        const copyToClipboard = (text) => {
+            const el = document.createElement('textarea');
+            el.value = text;
+            document.body.appendChild(el);
+            el.select();
+            document.execCommand('copy');
+            document.body.removeChild(el);
+        };
+
+        window.copyMsgCode = (id) => {
+            const el = document.querySelector(`#${id} code`);
+            if (el) {
+                copyToClipboard(el.innerText);
+                showNotification("Code copied to clipboard!", true);
             }
         };
 
-        onAuthStateChanged(auth, (user) => {
-            currentUser = user;
+        const goToDashboard = (name) => {
+            userState.name = name;
+            document.getElementById('screen-auth')?.classList.add('hidden');
+            document.getElementById('screen-dashboard')?.classList.remove('hidden');
+            const userDisplay = document.getElementById('display-user');
+            if (userDisplay) userDisplay.innerText = `Verified: ${name}`;
+            document.getElementById('connectionBar')?.classList.add('hidden');
+            listenToRooms();
+            listenToPresenceData();
+            trackPresence();
+        };
+
+        onAuthStateChanged(auth, async (user) => {
             if (user) {
-                checkName();
+                userState.uid = user.uid;
+                const storedName = localStorage.getItem('ww_username');
+                if (storedName) goToDashboard(storedName);
+            } else {
+                signInAnonymously(auth);
             }
         });
 
-        initAuth();
+        async function trackPresence() {
+            const pDoc = doc(db, ...DATA_PATH, `presence_${userState.uid}`);
+            await setDoc(pDoc, { docType: 'global_presence', uid: userState.uid, lastSeen: serverTimestamp() });
+            window.addEventListener('beforeunload', () => deleteDoc(pDoc));
+        }
 
-        function checkName() {
-            const savedName = localStorage.getItem('wwchat_name');
-            if (savedName) {
-                screens.name.classList.add('hidden');
-                screens.home.classList.remove('hidden');
-                document.getElementById('userGreeting').innerText = `Hello, ${savedName}`;
-                initDashboard();
+        function listenToRooms() {
+            onSnapshot(baseCollection, (snap) => {
+                cachedRooms = [];
+                snap.forEach(d => { if (d.data().docType === 'room') cachedRooms.push({ ...d.data(), docId: d.id }); });
+                const badge = document.getElementById('room-count-badge');
+                if (badge) badge.innerText = cachedRooms.length;
+                renderRooms();
+            });
+        }
+
+        function renderRooms() {
+            const list = document.getElementById('list-rooms');
+            const searchInput = document.getElementById('room-search');
+            if (!list || !searchInput) return;
+
+            const search = searchInput.value.toLowerCase();
+            const emptyState = document.getElementById('empty-state');
+            list.innerHTML = '';
+            
+            const filtered = cachedRooms.filter(room => room.name.toLowerCase().includes(search));
+            
+            if (filtered.length === 0) {
+                emptyState?.classList.remove('hidden');
             } else {
-                screens.name.classList.remove('hidden');
+                emptyState?.classList.add('hidden');
+                filtered.forEach(room => {
+                    const isOwner = room.creator === userState.uid;
+                    const isPrivate = !!room.roomCode;
+                    const pCount = roomPresenceCounts[room.roomId] || 0;
+                    const el = document.createElement('div');
+                    
+                    el.className = "bg-custom-card p-6 rounded-[28px] border border-custom shadow-sm hover:border-indigo-400 transition-all cursor-pointer flex flex-col justify-between group relative overflow-hidden";
+                    
+                    el.innerHTML = `
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <div class="flex items-center space-x-2 mb-1">
+                                    <h3 class="font-bold text-custom-main text-lg">${room.name}</h3>
+                                    <i class="fas ${isPrivate ? 'fa-lock text-custom-muted' : 'fa-globe text-indigo-400'} text-[10px]"></i>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <span style="background-color: var(--bg-main)" class="text-custom-muted text-[10px] px-2.5 py-1 rounded-lg uppercase font-bold tracking-tight border border-custom">${room.roomId}</span>
+                                    <span class="text-[11px] font-bold ${pCount > 0 ? 'text-green-500' : 'text-custom-muted'}"><i class="fas fa-users mr-1"></i>${pCount}</span>
+                                </div>
+                            </div>
+                            <div class="bg-indigo-500/10 text-indigo-600 text-[9px] font-bold px-3 py-1 rounded-full border border-indigo-500/10">${isPrivate ? 'PRIVATE' : 'PUBLIC'}</div>
+                        </div>
+                        <div class="mt-8 flex items-center justify-between text-indigo-600 pointer-events-none">
+                            <span class="text-[11px] font-extrabold uppercase tracking-widest">${isOwner ? 'Manage Room' : 'Join Room'}</span>
+                            <i class="fas fa-arrow-right text-xs transform group-hover:translate-x-1 transition-transform"></i>
+                        </div>
+                    `;
+                    
+                    el.onclick = () => {
+                        pendingJoin = room;
+                        if (!isPrivate || isOwner) openChat(pendingJoin);
+                        else {
+                            const joinModal = document.getElementById('modal-join');
+                            const codeInput = document.getElementById('input-join-code');
+                            if (codeInput) codeInput.value = '';
+                            joinModal?.classList.remove('hidden');
+                        }
+                    };
+                    list.appendChild(el);
+                });
             }
         }
 
-        function initDashboard() {
-            if (!currentUser) return;
-            const roomsRef = collection(db, 'artifacts', appId, 'public', 'data', 'rooms');
-            onSnapshot(roomsRef, (snapshot) => {
-                const grid = document.getElementById('roomsGrid');
-                document.getElementById('roomCount').innerText = `${snapshot.size} Active`;
-                grid.innerHTML = '';
-                
-                snapshot.forEach(d => {
-                    const data = d.data();
-                    const card = document.createElement('div');
-                    card.className = "room-card bg-white p-5 rounded-2xl flex flex-col justify-between";
-                    const isCreator = data.createdBy === currentUser.uid;
-                    
-                    card.innerHTML = `
-                        <div class="mb-4">
-                            <h3 class="font-black text-gray-900 truncate">${data.name}</h3>
-                            <p class="text-[11px] text-gray-400 font-bold uppercase tracking-tighter mt-1">Creator: ${data.creatorName || 'Anonymous'}</p>
-                        </div>
-                        <div class="flex items-center space-x-2">
-                            <button class="join-btn flex-grow ww-purple text-white py-2 rounded-lg text-xs font-bold hover:opacity-90 transition-all">
-                                <i class="fas fa-lock mr-1"></i> Enter Code
-                            </button>
-                            ${isCreator ? `<button class="delete-btn w-10 h-8 border border-red-100 text-red-500 rounded-lg flex items-center justify-center hover:bg-red-50"><i class="fas fa-trash-alt text-xs"></i></button>` : ''}
-                        </div>
-                    `;
-                    card.querySelector('.join-btn').onclick = () => showAuthModal(d.id, data);
-                    if (isCreator) card.querySelector('.delete-btn').onclick = () => deleteRoom(d.id);
-                    grid.appendChild(card);
-                });
-            }, (err) => console.error("Room sync error:", err));
-        }
-
-        function showAuthModal(id, data) {
-            pendingRoom = { id, ...data };
-            document.getElementById('modalRoomName').innerText = data.name;
-            document.getElementById('modalCodeInput').value = '';
-            modal.classList.remove('hidden');
-            document.getElementById('modalCodeInput').focus();
-        }
-
-        document.getElementById('confirmAuth').onclick = () => {
-            const codeInput = document.getElementById('modalCodeInput').value.trim();
-            if (codeInput === pendingRoom.code) {
-                modal.classList.add('hidden');
-                enterChat(pendingRoom);
-            } else { alert("Incorrect code."); }
-        };
-
-        document.getElementById('cancelAuth').onclick = () => modal.classList.add('hidden');
-
-        document.getElementById('startBtn').onclick = () => {
-            const name = document.getElementById('initialNameInput').value.trim();
-            if (name) { localStorage.setItem('wwchat_name', name); checkName(); }
-        };
-
-        document.getElementById('finalizeCreateBtn').onclick = async () => {
-            if (!currentUser) return;
-            const name = document.getElementById('newRoomName').value.trim();
-            const code = document.getElementById('newRoomCode').value.trim();
-            if (!name || !code) return alert("Required fields missing");
-
-            try {
-                const roomsRef = collection(db, 'artifacts', appId, 'public', 'data', 'rooms');
-                await addDoc(roomsRef, {
-                    name, code, createdBy: currentUser.uid, 
-                    creatorName: localStorage.getItem('wwchat_name'), 
-                    createdAt: serverTimestamp()
-                });
-                document.getElementById('newRoomName').value = '';
-                document.getElementById('newRoomCode').value = '';
-            } catch (err) { console.error(err); }
-        };
-
-        async function deleteRoom(id) {
-            if (!confirm("Delete room?")) return;
-            try { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'rooms', id)); } 
-            catch (err) { console.error(err); }
-        }
-
-        function enterChat(room) {
+        async function openChat(room) {
             activeRoom = room;
-            screens.home.classList.add('hidden');
-            screens.chat.classList.remove('hidden');
-            document.getElementById('activeRoomNameDisplay').innerText = room.name;
-            listenToMessages(room.id);
+            document.getElementById('screen-dashboard')?.classList.add('hidden');
+            document.getElementById('screen-chat')?.classList.remove('hidden');
+            const headerName = document.getElementById('chat-header-name');
+            const idBadge = document.getElementById('chat-id-badge');
+            if (headerName) headerName.innerText = room.name;
+            if (idBadge) idBadge.innerText = room.roomId;
+            
+            const rPresenceDoc = doc(db, ...DATA_PATH, `room_p_${room.roomId}_${userState.uid}`);
+            await setDoc(rPresenceDoc, { docType: 'room_presence', roomId: room.roomId, uid: userState.uid });
+            
+            listenToMessages(room.roomId);
+            listenToRoomPresence(room.roomId);
         }
 
-        document.getElementById('backToHome').onclick = () => {
-            if (unsubscribeMessages) unsubscribeMessages();
-            screens.chat.classList.add('hidden');
-            screens.home.classList.remove('hidden');
-        };
+        function listenToRoomPresence(roomId) {
+            if (unsubPresence) unsubPresence();
+            unsubPresence = onSnapshot(baseCollection, (snap) => {
+                let count = 0;
+                snap.forEach(d => {
+                    const data = d.data();
+                    if(data.docType === 'room_presence' && data.roomId === roomId) count++;
+                });
+                const countEl = document.getElementById('active-user-count');
+                if (countEl) countEl.innerText = `${count} online`;
+            });
+        }
 
         function listenToMessages(roomId) {
-            if (!currentUser) return;
-            const msgRef = collection(db, 'artifacts', appId, 'public', 'data', 'messages');
-            unsubscribeMessages = onSnapshot(msgRef, (snapshot) => {
-                const list = document.getElementById('messagesList');
-                const sorted = snapshot.docs
-                    .map(d => d.data())
-                    .filter(m => m.roomId === roomId)
-                    .sort((a,b) => (a.at?.toMillis() || 0) - (b.at?.toMillis() || 0));
-                
-                list.innerHTML = '';
-                sorted.forEach(msg => {
-                    const isMe = msg.uid === currentUser.uid;
-                    const el = document.createElement('div');
-                    el.className = `msg-bubble ${isMe ? 'msg-sent' : 'msg-received'}`;
-                    const isCode = msg.text.includes('{') || msg.text.includes(';') || msg.text.includes('def ');
-                    el.innerHTML = `<div class="text-[9px] font-bold uppercase mb-1 opacity-60">${isMe ? 'YOU' : msg.user}</div>
-                        ${isCode ? `<pre class="text-[11px] code-font mt-1 p-2 bg-black/5 rounded">${escapeHTML(msg.text)}</pre>` : `<p class="text-sm font-medium">${escapeHTML(msg.text)}</p>`}`;
-                    list.appendChild(el);
+            if (unsubMsgs) unsubMsgs();
+            unsubMsgs = onSnapshot(baseCollection, (snap) => {
+                const container = document.getElementById('container-messages');
+                if (!container) return;
+                const msgs = [];
+                snap.forEach(d => {
+                    const data = d.data();
+                    if (data.docType === 'message' && data.roomId === roomId) msgs.push(data);
                 });
-                document.getElementById('chatWindow').scrollTop = document.getElementById('chatWindow').scrollHeight;
-            }, (err) => console.error("Msg sync error:", err));
+                msgs.sort((a,b) => (a.createdAt?.toMillis() || 0) - (b.createdAt?.toMillis() || 0));
+                container.innerHTML = '';
+                msgs.forEach((m, idx) => {
+                    const isMe = m.senderUid === userState.uid;
+                    const div = document.createElement('div');
+                    div.className = `msg-bubble ${isMe ? 'msg-sent' : 'msg-received'}`;
+                    let content = `<div class="text-[9px] font-extrabold uppercase opacity-60 mb-1">${m.senderName}</div>`;
+                    if (m.isCode) {
+                        content += `<div class="code-container" id="code-box-${idx}"><button class="copy-btn" onclick="copyMsgCode('code-box-${idx}')">COPY</button><code>${m.text.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</code></div>`;
+                    } else {
+                        content += `<div class="text-sm font-semibold whitespace-pre-wrap">${m.text}</div>`;
+                    }
+                    div.innerHTML = content;
+                    container.appendChild(div);
+                });
+                const scrollArea = document.getElementById('scroll-area');
+                if (scrollArea) scrollArea.scrollTop = scrollArea.scrollHeight;
+            });
         }
 
-        async function sendMsg() {
-            if (!currentUser || !activeRoom) return;
-            const input = document.getElementById('messageInput');
-            const text = input.value.trim();
-            if (!text) return;
-            input.value = '';
-            try {
-                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'messages'), {
-                    text, roomId: activeRoom.id, uid: currentUser.uid,
-                    user: localStorage.getItem('wwchat_name'), at: serverTimestamp()
-                });
-            } catch (err) { console.error(err); }
+        async function sendMessage() {
+            const msgArea = document.getElementById('input-message');
+            if (!msgArea) return;
+            const text = msgArea.value.trim();
+            if (!text || !activeRoom) return;
+            msgArea.value = '';
+            await addDoc(baseCollection, {
+                text, roomId: activeRoom.roomId, senderUid: userState.uid,
+                senderName: userState.name, docType: 'message',
+                isCode: isCodeMode, createdAt: serverTimestamp()
+            });
+            setChatMode(false);
         }
 
-        document.getElementById('sendBtn').onclick = sendMsg;
-        document.getElementById('messageInput').onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); } };
-        document.getElementById('copyInvite').onclick = () => { navigator.clipboard.writeText(activeRoom.code); alert("Code copied!"); };
-        function escapeHTML(s) { return s.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+        const setChatMode = (isCode) => {
+            isCodeMode = isCode;
+            const modeTextBtn = document.getElementById('mode-text');
+            const modeCodeBtn = document.getElementById('mode-code');
+            const msgArea = document.getElementById('input-message');
+            if (!modeTextBtn || !modeCodeBtn || !msgArea) return;
+            if(isCode) {
+                modeCodeBtn.className = "px-3 py-1 rounded-full text-[10px] font-bold border border-indigo-500 bg-indigo-500 text-white transition-all";
+                modeTextBtn.className = "px-3 py-1 rounded-full text-[10px] font-bold border border-custom text-custom-muted transition-all";
+                msgArea.placeholder = "Paste code here...";
+                msgArea.rows = 4;
+            } else {
+                modeTextBtn.className = "px-3 py-1 rounded-full text-[10px] font-bold border border-indigo-500 bg-indigo-500 text-white transition-all";
+                modeCodeBtn.className = "px-3 py-1 rounded-full text-[10px] font-bold border border-custom text-custom-muted transition-all";
+                msgArea.placeholder = "Type message...";
+                msgArea.rows = 1;
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const get = (id) => document.getElementById(id);
+            const terminal = get('screen-terminal');
+
+            if (get('btn-panic')) get('btn-panic').onclick = () => terminal?.classList.remove('hidden');
+            if (get('btn-panic-chat')) get('btn-panic-chat').onclick = () => terminal?.classList.remove('hidden');
+            if (terminal) terminal.onclick = () => terminal.classList.add('hidden');
+            
+            if (get('btn-invite')) get('btn-invite').onclick = () => {
+                if (activeRoom) {
+                    copyToClipboard(activeRoom.roomId);
+                    showNotification(`Room Code ${activeRoom.roomId} copied!`, true);
+                }
+            };
+
+            if (get('mode-text')) get('mode-text').onclick = () => setChatMode(false);
+            if (get('mode-code')) get('mode-code').onclick = () => setChatMode(true);
+            if (get('btn-send')) get('btn-send').onclick = sendMessage;
+            if (get('input-message')) {
+                get('input-message').onkeydown = (e) => {
+                    if (e.key === 'Enter' && !e.shiftKey && !isCodeMode) {
+                        e.preventDefault();
+                        sendMessage();
+                    }
+                };
+            }
+
+            if (get('btn-login')) {
+                get('btn-login').onclick = () => {
+                    const name = get('input-username')?.value.trim();
+                    if (name) {
+                        localStorage.setItem('ww_username', name);
+                        goToDashboard(name);
+                    }
+                };
+            }
+
+            if (get('btn-logout')) {
+                get('btn-logout').onclick = () => {
+                    localStorage.clear(); 
+                    location.reload();
+                };
+            }
+
+            if (get('btn-chat-back')) {
+                get('btn-chat-back').onclick = async () => {
+                    if (unsubMsgs) unsubMsgs();
+                    if (unsubPresence) unsubPresence();
+                    if (activeRoom) {
+                        const rPresenceDoc = doc(db, ...DATA_PATH, `room_p_${activeRoom.roomId}_${userState.uid}`);
+                        await deleteDoc(rPresenceDoc);
+                        activeRoom = null;
+                    }
+                    get('screen-chat')?.classList.add('hidden');
+                    get('screen-dashboard')?.classList.remove('hidden');
+                };
+            }
+
+            if (get('check-private')) {
+                get('check-private').onchange = (e) => {
+                    get('password-wrapper')?.classList.toggle('hidden', !e.target.checked);
+                };
+            }
+
+            if (get('btn-create-room')) {
+                get('btn-create-room').onclick = async () => {
+                    const name = get('new-room-name')?.value.trim();
+                    if (!name) return;
+                    const isPrivate = get('check-private')?.checked || false;
+                    const code = get('new-room-code')?.value.trim() || "";
+                    await addDoc(baseCollection, {
+                        name, roomCode: isPrivate ? code : null,
+                        roomId: Math.random().toString(36).substring(7).toUpperCase(),
+                        docType: 'room', createdAt: serverTimestamp(), creator: userState.uid
+                    });
+                    if (get('new-room-name')) get('new-room-name').value = '';
+                    if (get('new-room-code')) get('new-room-code').value = '';
+                    if (get('check-private')) get('check-private').checked = false;
+                    get('password-wrapper')?.classList.add('hidden');
+                    showNotification("Channel initialized successfully!");
+                };
+            }
+
+            if (get('room-search')) get('room-search').oninput = () => renderRooms();
+            
+            if (get('btn-theme-toggle')) {
+                get('btn-theme-toggle').onclick = () => {
+                    const dark = document.documentElement.classList.toggle('dark');
+                    localStorage.setItem('ww_theme', dark ? 'dark' : 'light');
+                };
+            }
+
+            if (get('btn-join-confirm')) {
+                get('btn-join-confirm').onclick = () => {
+                    const codeInput = get('input-join-code');
+                    if (codeInput && pendingJoin && codeInput.value === pendingJoin.roomCode) {
+                        get('modal-join')?.classList.add('hidden');
+                        codeInput.value = '';
+                        openChat(pendingJoin);
+                    } else {
+                        showNotification("Invalid Access Code", false);
+                    }
+                };
+            }
+
+            if (get('btn-join-cancel')) {
+                get('btn-join-cancel').onclick = () => {
+                    get('modal-join')?.classList.add('hidden');
+                    if (get('input-join-code')) get('input-join-code').value = '';
+                };
+            }
+        });
+
+        function listenToPresenceData() {
+            onSnapshot(baseCollection, (snap) => {
+                let p = 0;
+                roomPresenceCounts = {};
+                snap.forEach(d => { 
+                    const data = d.data();
+                    if(data.docType === 'global_presence') p++; 
+                    if(data.docType === 'room_presence') {
+                        roomPresenceCounts[data.roomId] = (roomPresenceCounts[data.roomId] || 0) + 1;
+                    }
+                });
+                const globalCount = document.getElementById('global-presence-count');
+                if (globalCount) globalCount.innerText = `${p} Active Members`;
+                renderRooms();
+            });
+        }
     </script>
 </body>
 </html>
