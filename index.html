@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>WWChat | Production Build</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -45,6 +45,9 @@
             background-color: var(--bg-main) !important; 
             color: var(--text-main);
             transition: background-color 0.3s ease, color 0.3s ease;
+            height: 100vh;
+            height: 100dvh;
+            overflow: hidden;
         }
         
         .bg-custom-main { background-color: var(--bg-main); }
@@ -127,9 +130,9 @@
         #notification-toast.show { transform: translateX(-50%) translateY(0); }
     </style>
 </head>
-<body class="h-screen flex flex-col overflow-hidden bg-custom-main">
+<body class="flex flex-col bg-custom-main">
 
-    <div id="connectionBar" class="bg-amber-500 text-white text-[10px] py-1 px-4 text-center font-bold transition-all">
+    <div id="connectionBar" class="bg-amber-500 text-white text-[10px] py-1 px-4 text-center font-bold transition-all shrink-0">
         <i class="fas fa-circle-notch fa-spin mr-2"></i> CONNECTING...
     </div>
 
@@ -166,15 +169,15 @@
     </div>
 
     <!-- 2. DASHBOARD SCREEN -->
-    <div id="screen-dashboard" class="fixed inset-0 z-50 bg-custom-main flex flex-col hidden">
-        <header class="p-6 bg-custom-card border-b border-custom flex justify-between items-center transition-colors">
+    <div id="screen-dashboard" class="flex-grow flex flex-col hidden overflow-hidden">
+        <header class="p-6 bg-custom-card border-b border-custom flex justify-between items-center transition-colors shrink-0">
             <div class="flex items-center space-x-4">
                 <div>
-                    <h1 class="text-2xl font-extrabold tracking-tight text-indigo-600 leading-none">Dashboard</h1>
+                    <h1 class="text-xl sm:text-2xl font-extrabold tracking-tight text-indigo-600 leading-none">Dashboard</h1>
                     <p id="display-user" class="text-[10px] text-custom-muted font-bold uppercase mt-1 tracking-wider"></p>
                 </div>
-                <div class="h-8 w-[1px] border-r border-custom"></div>
-                <div class="flex items-center space-x-2 bg-green-500/10 px-3 py-1.5 rounded-full border border-green-500/20">
+                <div class="h-8 w-[1px] border-r border-custom hidden sm:block"></div>
+                <div class="hidden sm:flex items-center space-x-2 bg-green-500/10 px-3 py-1.5 rounded-full border border-green-500/20">
                     <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
                     <span id="global-presence-count" class="text-xs font-bold text-green-600 dark:text-green-400">0 Active Members</span>
                 </div>
@@ -189,7 +192,7 @@
         </header>
 
         <div class="flex-grow flex flex-col md:flex-row overflow-hidden bg-custom-main">
-            <div class="flex-grow p-6 overflow-y-auto flex flex-col">
+            <div class="flex-grow p-4 sm:p-6 overflow-y-auto flex flex-col">
                 <div class="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
                     <div class="flex items-center space-x-2">
                         <h2 class="font-extrabold text-custom-muted text-xs uppercase tracking-widest">Active Channels</h2>
@@ -201,7 +204,7 @@
                     </div>
                 </div>
                 
-                <div id="list-rooms" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+                <div id="list-rooms" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6"></div>
                 
                 <div id="empty-state" class="hidden flex-grow flex flex-col items-center justify-center text-custom-muted py-12">
                     <i class="fas fa-search text-4xl mb-3 opacity-20"></i>
@@ -209,8 +212,8 @@
                 </div>
             </div>
 
-            <!-- New Channel Panel (FIXED STYLING) -->
-            <div class="w-full md:w-80 p-6 glass-sidebar border-l border-custom space-y-6">
+            <!-- New Channel Panel -->
+            <div class="w-full md:w-80 p-4 sm:p-6 glass-sidebar border-t md:border-t-0 md:border-l border-custom space-y-6 shrink-0">
                 <div class="new-channel-card p-6 rounded-[32px] shadow-sm">
                     <h3 class="font-bold text-indigo-600 dark:text-indigo-400 mb-4 flex items-center">
                         <i class="fas fa-plus-circle mr-2 opacity-50"></i> New Channel
@@ -235,35 +238,35 @@
     </div>
 
     <!-- CHAT INTERFACE -->
-    <div id="screen-chat" class="fixed inset-0 z-[70] bg-custom-main flex flex-col hidden">
-        <header class="ww-gradient text-white p-4 flex items-center justify-between shadow-xl">
+    <div id="screen-chat" class="fixed inset-0 z-[70] bg-custom-main flex flex-col hidden overflow-hidden">
+        <header class="ww-gradient text-white p-4 flex items-center justify-between shadow-xl shrink-0">
             <div class="flex items-center space-x-4">
                 <button id="btn-chat-back" class="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center"><i class="fas fa-chevron-left"></i></button>
-                <div>
-                    <h2 id="chat-header-name" class="font-extrabold uppercase">ROOM</h2>
+                <div class="overflow-hidden">
+                    <h2 id="chat-header-name" class="font-extrabold uppercase truncate max-w-[120px] sm:max-w-none">ROOM</h2>
                     <span id="active-user-count" class="text-[10px] opacity-70">0 online</span>
                 </div>
             </div>
             <div class="flex items-center space-x-2">
-                <button id="btn-panic-chat" class="bg-white/10 px-3 py-1.5 rounded-lg text-xs font-bold"><i class="fas fa-terminal"></i></button>
-                <button id="btn-invite" class="bg-white/10 px-3 py-1.5 rounded-lg text-xs font-bold"><i class="fas fa-user-plus mr-2"></i> Invite</button>
-                <div id="chat-id-badge" class="bg-black/20 px-3 py-1.5 rounded-lg text-[10px] font-mono">CODE</div>
+                <button id="btn-panic-chat" class="bg-white/10 px-3 py-1.5 rounded-lg text-xs font-bold hidden sm:block"><i class="fas fa-terminal"></i></button>
+                <button id="btn-invite" class="bg-white/10 px-3 py-1.5 rounded-lg text-xs font-bold"><i class="fas fa-user-plus mr-1 sm:mr-2"></i> Invite</button>
+                <div id="chat-id-badge" class="bg-black/20 px-3 py-1.5 rounded-lg text-[10px] font-mono hidden sm:block">CODE</div>
             </div>
         </header>
 
-        <main id="scroll-area" class="flex-grow overflow-y-auto p-6 flex flex-col">
+        <main id="scroll-area" class="flex-grow overflow-y-auto p-4 sm:p-6 flex flex-col">
             <div id="container-messages" class="flex flex-col"></div>
         </main>
 
-        <footer class="p-4 bg-custom-card border-t border-custom">
+        <footer class="p-4 bg-custom-card border-t border-custom shrink-0">
             <div class="max-w-5xl mx-auto space-y-3">
                 <div class="flex space-x-2 px-1">
                     <button id="mode-text" class="px-3 py-1 rounded-full text-[10px] font-bold border border-indigo-500 bg-indigo-500 text-white transition-all">TEXT MODE</button>
                     <button id="mode-code" class="px-3 py-1 rounded-full text-[10px] font-bold border border-custom text-custom-muted transition-all">CODE MODE</button>
                 </div>
                 <div class="flex items-end space-x-3 bg-custom-main p-2 rounded-2xl border border-custom">
-                    <textarea id="input-message" rows="1" class="flex-grow bg-transparent px-4 py-2 outline-none text-sm text-custom-main resize-none" placeholder="Type message..."></textarea>
-                    <button id="btn-send" class="w-12 h-12 ww-gradient text-white rounded-xl flex items-center justify-center shadow-lg"><i class="fas fa-paper-plane"></i></button>
+                    <textarea id="input-message" rows="1" class="flex-grow bg-transparent px-4 py-2 outline-none text-sm text-custom-main resize-none max-h-32" placeholder="Type message..."></textarea>
+                    <button id="btn-send" class="w-12 h-12 ww-gradient text-white rounded-xl flex items-center justify-center shadow-lg shrink-0"><i class="fas fa-paper-plane"></i></button>
                 </div>
             </div>
         </footer>
@@ -403,9 +406,9 @@
                     
                     el.innerHTML = `
                         <div class="flex justify-between items-start">
-                            <div>
+                            <div class="overflow-hidden">
                                 <div class="flex items-center space-x-2 mb-1">
-                                    <h3 class="font-bold text-custom-main text-lg">${room.name}</h3>
+                                    <h3 class="font-bold text-custom-main text-lg truncate max-w-[150px]">${room.name}</h3>
                                     <i class="fas ${isPrivate ? 'fa-lock text-custom-muted' : 'fa-globe text-indigo-400'} text-[10px]"></i>
                                 </div>
                                 <div class="flex items-center space-x-2">
@@ -413,7 +416,7 @@
                                     <span class="text-[11px] font-bold ${pCount > 0 ? 'text-green-500' : 'text-custom-muted'}"><i class="fas fa-users mr-1"></i>${pCount}</span>
                                 </div>
                             </div>
-                            <div class="bg-indigo-500/10 text-indigo-600 text-[9px] font-bold px-3 py-1 rounded-full border border-indigo-500/10">${isPrivate ? 'PRIVATE' : 'PUBLIC'}</div>
+                            <div class="bg-indigo-500/10 text-indigo-600 text-[9px] font-bold px-3 py-1 rounded-full border border-indigo-500/10 shrink-0">${isPrivate ? 'PRIVATE' : 'PUBLIC'}</div>
                         </div>
                         <div class="mt-8 flex items-center justify-between text-indigo-600 pointer-events-none">
                             <span class="text-[11px] font-extrabold uppercase tracking-widest">${isOwner ? 'Manage Room' : 'Join Room'}</span>
@@ -501,6 +504,7 @@
             const text = msgArea.value.trim();
             if (!text || !activeRoom) return;
             msgArea.value = '';
+            msgArea.style.height = 'auto'; // Reset height
             await addDoc(baseCollection, {
                 text, roomId: activeRoom.roomId, senderUid: userState.uid,
                 senderName: userState.name, docType: 'message',
@@ -532,6 +536,15 @@
             const get = (id) => document.getElementById(id);
             const terminal = get('screen-terminal');
 
+            // Handle auto-resize for textarea
+            const msgInput = get('input-message');
+            if (msgInput) {
+                msgInput.addEventListener('input', function() {
+                    this.style.height = 'auto';
+                    this.style.height = (this.scrollHeight) + 'px';
+                });
+            }
+
             if (get('btn-panic')) get('btn-panic').onclick = () => terminal?.classList.remove('hidden');
             if (get('btn-panic-chat')) get('btn-panic-chat').onclick = () => terminal?.classList.remove('hidden');
             if (terminal) terminal.onclick = () => terminal.classList.add('hidden');
@@ -548,7 +561,7 @@
             if (get('btn-send')) get('btn-send').onclick = sendMessage;
             if (get('input-message')) {
                 get('input-message').onkeydown = (e) => {
-                    if (e.key === 'Enter' && !e.shiftKey && !isCodeMode) {
+                    if (e.key === 'Enter' && !e.shiftKey && !isCodeMode && window.innerWidth > 768) {
                         e.preventDefault();
                         sendMessage();
                     }
